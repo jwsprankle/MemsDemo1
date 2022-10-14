@@ -739,34 +739,33 @@ void StartDefaultTask(void const * argument)
 	osDelay(500);
 
 
-	while (WifiStatus != WIFI_STATUS_OK)
-	{
-
-		if (WIFI_Init() != WIFI_STATUS_OK) {break;}
-
-		if (WIFI_Connect(SSID, PASSWORD, WIFI_ECN_WPA2_PSK) != WIFI_STATUS_OK) {break;}
-
-		if (WIFI_OpenClientConnection(0, WIFI_UDP_PROTOCOL, "UDP_CLIENT", RemoteIP, RemotePORT, 0) != WIFI_STATUS_OK) {break;}
-
-		WifiStatus = WIFI_STATUS_OK;
-	}
-
 	while (1)
 	{
-		sprintf((char*)TxData, "S3=30\r\r\nCount = %5d\r\n Error = %d5", count, errors);
-
-		WifiStatus = WIFI_SendData(TEST_SOCKET, TxData, sizeof(TxData), &Datalen, WIFI_WRITE_TIMEOUT);
-
-		if (WifiStatus != WIFI_STATUS_OK)
+		// Repeat connect sequence until we get good connection
+		while (WifiStatus != WIFI_STATUS_OK)
 		{
-			errors++;
+			if (WIFI_Init() != WIFI_STATUS_OK) {break;}
+
+			if (WIFI_Connect(SSID, PASSWORD, WIFI_ECN_WPA2_PSK) != WIFI_STATUS_OK) {break;}
+
+			if (WIFI_OpenClientConnection(0, WIFI_UDP_PROTOCOL, "UDP_CLIENT", RemoteIP, RemotePORT, 0) != WIFI_STATUS_OK) {break;}
+
+			WifiStatus = WIFI_STATUS_OK;
 		}
 
-		count++;
+		// Loop until connection is lost
+		while (WifiStatus == WIFI_STATUS_OK)
+		{
+			count++;
 
-		osDelay(10);
+			sprintf((char*)TxData, "S3=30\r\r\nCount = %5d\r\n Error = %d5", count, errors);
+
+			WifiStatus = WIFI_SendData(TEST_SOCKET, TxData, sizeof(TxData), &Datalen, WIFI_WRITE_TIMEOUT);
+
+			osDelay(10);
+		}
+
 	}
-
   /* USER CODE END 5 */
 }
 
