@@ -187,6 +187,22 @@ WIFI_Status_t       WIFI_ModuleFirmwareUpdate(const char *url);
 WIFI_Status_t       WIFI_GetModuleID(char *Id);
 WIFI_Status_t       WIFI_GetModuleFwRevision(char *rev);
 WIFI_Status_t       WIFI_GetModuleName(char *ModuleName);
+
+typedef struct {
+  char* SSID;												/*!< SSID */
+  char* Password;											/*!< Password */
+  WIFI_Protocol_t Protocol;                                 /*!< Connection type. Parameter is valid only if connection is made as client */
+  uint8_t SocketNumber;                                     /*!< Connection number */
+  uint16_t RemotePort;                                      /*!< Remote PORT number */
+  uint8_t RemoteIP[4];                                      /*!< IP address of device */
+  WIFI_Ecn_t ecn;											/*!< Encoding */
+  uint32_t WifiWriteTimeout;								/*!< Write timerout MS*/
+  uint32_t WifiReadTimeout;									/*!< Write timerout MS*/
+
+} Remote_Socket_t;
+
+
+
 #ifdef __cplusplus
 }
 #endif

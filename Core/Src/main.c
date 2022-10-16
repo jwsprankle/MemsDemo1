@@ -23,11 +23,14 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include <wifi.h>
+#include "es_wifi_conf.h"
+#include "remote_comm_task.h"
 
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
+
 
 /* USER CODE END PTD */
 
@@ -55,8 +58,9 @@ UART_HandleTypeDef huart3;
 PCD_HandleTypeDef hpcd_USB_OTG_FS;
 
 osThreadId defaultTaskHandle;
-/* USER CODE BEGIN PV */
+osThreadId remoteCommTaskHandle;
 
+/* USER CODE BEGIN PV */
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -70,6 +74,7 @@ static void MX_USART1_UART_Init(void);
 static void MX_USART3_UART_Init(void);
 static void MX_USB_OTG_FS_PCD_Init(void);
 void StartDefaultTask(void const * argument);
+void StartRemoteCommTask(void const * argument);
 
 /* USER CODE BEGIN PFP */
 
@@ -139,6 +144,10 @@ int main(void)
   /* definition and creation of defaultTask */
   osThreadDef(defaultTask, StartDefaultTask, osPriorityNormal, 0, 256);
   defaultTaskHandle = osThreadCreate(osThread(defaultTask), NULL);
+
+  /* definition and creation of remoteCommTask */
+  osThreadDef(remoteCommTask, StartRemoteCommTask, osPriorityIdle, 0, 256);
+  remoteCommTaskHandle = osThreadCreate(osThread(remoteCommTask), NULL);
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
@@ -709,64 +718,66 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 void StartDefaultTask(void const * argument)
 {
   /* USER CODE BEGIN 5 */
-	/* Infinite loop */
-	/* Update SSID and PASSWORD with own Access point settings */
-//	#define SSID     "TP-Link_4008"
-//	#define PASSWORD "70708103"
 
-	#define SSID     "NETGEAR45"
-	#define PASSWORD "smoothcomet710"
-
-	uint8_t RemoteIP[] = {192,168,0,236};
-	#define TestSocket 0
-	#define RemotePORT	62510
-
-	#define TEST_SOCKET 0
-	#define REMOTE_PORT	62510
+	RemoteCommTask(argument);
+//	uint8_t TxData[60];
+//	uint16_t Datalen;
+//	int count = 0;
+//	int errors = 0;
+//
+//
+//	WIFI_Status_t WifiStatus = WIFI_STATUS_ERROR;
+//
+//	// Wait for ES_WIFI to finish boot
+//	osDelay(500);
 
 
-	#define WIFI_WRITE_TIMEOUT 10000
-	#define WIFI_READ_TIMEOUT  10000
+//	while (1)
+//	{
+//		// Repeat connect sequence until we get good connection
+//		while (WifiStatus != WIFI_STATUS_OK)
+//		{
+//			if (WIFI_Init() != WIFI_STATUS_OK) {break;}
+//
+//			if (WIFI_Connect(WIFI_ACC_PNT_SSID, WIFI_ACC_PNT_PASSWORD, WIFI_ECN_WPA2_PSK) != WIFI_STATUS_OK) {break;}
+//
+//			if (WIFI_OpenClientConnection(0, WIFI_UDP_PROTOCOL, "UDP_CLIENT", WIFI_SOCKET_0_IP, WIFI_SOCKET_0_PORT, 0) != WIFI_STATUS_OK) {break;}
+//
+//			WifiStatus = WIFI_STATUS_OK;
+//		}
+//
+//		// Loop until connection is lost
+//		while (WifiStatus == WIFI_STATUS_OK)
+//		{
+//			count++;
+//
+//			sprintf((char*)TxData, "S3=30\r\r\nCount = %5d\r\n Error = %d5", count, errors);
+//
+//			WifiStatus = WIFI_SendData(WIFI_SOCKET_0, TxData, sizeof(TxData), &Datalen, WIFI_SOCKET_0_WRITE_TIMEOUT);
+//
+//			osDelay(10);
+//		}
 
-	uint8_t TxData[60];
-	uint16_t Datalen;
-	int count = 0;
-	int errors = 0;
-
-	WIFI_Status_t WifiStatus = WIFI_STATUS_ERROR;
-
-	// Wait for ES_WIFI to finish boot
-	osDelay(500);
-
-
-	while (1)
-	{
-		// Repeat connect sequence until we get good connection
-		while (WifiStatus != WIFI_STATUS_OK)
-		{
-			if (WIFI_Init() != WIFI_STATUS_OK) {break;}
-
-			if (WIFI_Connect(SSID, PASSWORD, WIFI_ECN_WPA2_PSK) != WIFI_STATUS_OK) {break;}
-
-			if (WIFI_OpenClientConnection(0, WIFI_UDP_PROTOCOL, "UDP_CLIENT", RemoteIP, RemotePORT, 0) != WIFI_STATUS_OK) {break;}
-
-			WifiStatus = WIFI_STATUS_OK;
-		}
-
-		// Loop until connection is lost
-		while (WifiStatus == WIFI_STATUS_OK)
-		{
-			count++;
-
-			sprintf((char*)TxData, "S3=30\r\r\nCount = %5d\r\n Error = %d5", count, errors);
-
-			WifiStatus = WIFI_SendData(TEST_SOCKET, TxData, sizeof(TxData), &Datalen, WIFI_WRITE_TIMEOUT);
-
-			osDelay(10);
-		}
-
-	}
+//	}
   /* USER CODE END 5 */
+}
+
+/* USER CODE BEGIN Header_StartRemoteCommTask */
+/**
+* @brief Function implementing the remoteCommTask thread.
+* @param argument: Not used
+* @retval None
+*/
+/* USER CODE END Header_StartRemoteCommTask */
+void StartRemoteCommTask(void const * argument)
+{
+  /* USER CODE BEGIN StartRemoteCommTask */
+  /* Infinite loop */
+  for(;;)
+  {
+    osDelay(1);
+  }
+  /* USER CODE END StartRemoteCommTask */
 }
 
 /**

@@ -332,6 +332,7 @@ ES_WIFI_Status_t  ES_WIFI_RegisterBusIO(ES_WIFIObject_t *Obj, IO_Init_Func IO_In
                                                               IO_Delay_Func   IO_Delay,
                                                               IO_Send_Func    IO_Send,
                                                               IO_Receive_Func  IO_Receive);
+
 #ifdef __cplusplus
 }
 #endif

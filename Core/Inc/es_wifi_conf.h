@@ -50,6 +50,7 @@
  extern "C" {
 #endif  
 
+
 //#define WIFI_USE_CMSIS_OS
 
 #ifdef WIFI_USE_CMSIS_OS
@@ -70,7 +71,7 @@ extern osMutexId es_wifi_mutex;
 #define UNLOCK_WIFI()
 #define LOCK_SPI()
 #define UNLOCK_SPI()
-#define SEM_SIGNAL(a)     
+#define SEM_SIGNAL(a)
 #endif
 
 #define ES_WIFI_MAX_SSID_NAME_SIZE                  32
@@ -94,8 +95,6 @@ extern osMutexId es_wifi_mutex;
                                                     
 #define ES_WIFI_USE_SPI                             1  
 #define ES_WIFI_USE_UART                            (!ES_WIFI_USE_SPI)   
-   
-
 
 #ifdef __cplusplus
 }
