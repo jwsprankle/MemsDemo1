@@ -1,0 +1,3 @@
+../Core/Src/bsp_lis3mdl.c:9:9:bsp_lis3mdl_init	48	static
+../Core/Src/bsp_lis3mdl.c:113:9:bsp_lis3mdl_enable	16	static
+../Core/Src/bsp_lis3mdl.c:133:9:lis3mdl_disable	8	static

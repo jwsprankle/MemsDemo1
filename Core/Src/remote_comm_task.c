@@ -47,7 +47,9 @@ void RemoteCommTask(void const * argument)
 
 			sprintf((char*)TxData, "S3=30\r\r\nCount = %5d\r\n Error = %d5", count, errors);
 
+//			SEGGER_SYSVIEW_PrintfHost("Start Send");
 			WifiStatus = WIFI_SendData(Socket_0_conf.SocketNumber, TxData, sizeof(TxData), &Datalen, Socket_0_conf.WifiWriteTimeout);
+//			SEGGER_SYSVIEW_PrintfHost("End Send");
 
 			osDelay(10);
 		}

@@ -1,0 +1,3 @@
+../Core/Src/bsp_lsm6dsl.c:15:9:bsp_lsm6dsl_init	48	static
+../Core/Src/bsp_lsm6dsl.c:102:6:bsp_lsm6dsl_enable	8	static
+../Core/Src/bsp_lsm6dsl.c:107:6:bsp_lsm6dsl_disable	8	static

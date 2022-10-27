@@ -22,9 +22,13 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-#include <wifi.h>
 #include "es_wifi_conf.h"
 #include "remote_comm_task.h"
+#include "bsp_lsm6dsl.h"
+#include "bsp_lis3mdl.h"
+#include "sensor_bus1.h"
+#include <wifi.h>
+#include <SEGGER_SYSVIEW.h>
 
 /* USER CODE END Includes */
 
@@ -46,8 +50,6 @@
 /* Private variables ---------------------------------------------------------*/
 DFSDM_Channel_HandleTypeDef hdfsdm1_channel1;
 
-I2C_HandleTypeDef hi2c2;
-
 QSPI_HandleTypeDef hqspi;
 
 SPI_HandleTypeDef hspi3;
@@ -59,15 +61,14 @@ PCD_HandleTypeDef hpcd_USB_OTG_FS;
 
 osThreadId defaultTaskHandle;
 osThreadId remoteCommTaskHandle;
-
 /* USER CODE BEGIN PV */
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
+static void MX_DMA_Init(void);
 static void MX_DFSDM1_Init(void);
-static void MX_I2C2_Init(void);
 static void MX_QUADSPI_Init(void);
 static void MX_SPI3_Init(void);
 static void MX_USART1_UART_Init(void);
@@ -82,6 +83,8 @@ void StartRemoteCommTask(void const * argument);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+static void AccGyroCallback(GYRO_ACC_t * pRawData, uint16_t numItems);
+static void MagCallback(LIS3MDL_AxesRaw_t * pRawData, uint16_t numItems);
 
 /* USER CODE END 0 */
 
@@ -113,15 +116,16 @@ int main(void)
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
+  MX_DMA_Init();
   MX_DFSDM1_Init();
-  MX_I2C2_Init();
   MX_QUADSPI_Init();
   MX_SPI3_Init();
   MX_USART1_UART_Init();
   MX_USART3_UART_Init();
   MX_USB_OTG_FS_PCD_Init();
   /* USER CODE BEGIN 2 */
-
+  SEGGER_SYSVIEW_Conf();
+  SensorBus1_Init(&AccGyroCallback, &MagCallback);
   /* USER CODE END 2 */
 
   /* USER CODE BEGIN RTOS_MUTEX */
@@ -263,54 +267,6 @@ static void MX_DFSDM1_Init(void)
   /* USER CODE BEGIN DFSDM1_Init 2 */
 
   /* USER CODE END DFSDM1_Init 2 */
-
-}
-
-/**
-  * @brief I2C2 Initialization Function
-  * @param None
-  * @retval None
-  */
-static void MX_I2C2_Init(void)
-{
-
-  /* USER CODE BEGIN I2C2_Init 0 */
-
-  /* USER CODE END I2C2_Init 0 */
-
-  /* USER CODE BEGIN I2C2_Init 1 */
-
-  /* USER CODE END I2C2_Init 1 */
-  hi2c2.Instance = I2C2;
-  hi2c2.Init.Timing = 0x10909CEC;
-  hi2c2.Init.OwnAddress1 = 0;
-  hi2c2.Init.AddressingMode = I2C_ADDRESSINGMODE_7BIT;
-  hi2c2.Init.DualAddressMode = I2C_DUALADDRESS_DISABLE;
-  hi2c2.Init.OwnAddress2 = 0;
-  hi2c2.Init.OwnAddress2Masks = I2C_OA2_NOMASK;
-  hi2c2.Init.GeneralCallMode = I2C_GENERALCALL_DISABLE;
-  hi2c2.Init.NoStretchMode = I2C_NOSTRETCH_DISABLE;
-  if (HAL_I2C_Init(&hi2c2) != HAL_OK)
-  {
-    Error_Handler();
-  }
-
-  /** Configure Analogue filter
-  */
-  if (HAL_I2CEx_ConfigAnalogFilter(&hi2c2, I2C_ANALOGFILTER_ENABLE) != HAL_OK)
-  {
-    Error_Handler();
-  }
-
-  /** Configure Digital filter
-  */
-  if (HAL_I2CEx_ConfigDigitalFilter(&hi2c2, 0) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  /* USER CODE BEGIN I2C2_Init 2 */
-
-  /* USER CODE END I2C2_Init 2 */
 
 }
 
@@ -493,6 +449,25 @@ static void MX_USB_OTG_FS_PCD_Init(void)
 }
 
 /**
+  * Enable DMA controller clock
+  */
+static void MX_DMA_Init(void)
+{
+
+  /* DMA controller clock enable */
+  __HAL_RCC_DMA1_CLK_ENABLE();
+
+  /* DMA interrupt init */
+  /* DMA1_Channel4_IRQn interrupt configuration */
+  HAL_NVIC_SetPriority(DMA1_Channel4_IRQn, 5, 0);
+  HAL_NVIC_EnableIRQ(DMA1_Channel4_IRQn);
+  /* DMA1_Channel5_IRQn interrupt configuration */
+  HAL_NVIC_SetPriority(DMA1_Channel5_IRQn, 5, 0);
+  HAL_NVIC_EnableIRQ(DMA1_Channel5_IRQn);
+
+}
+
+/**
   * @brief GPIO Initialization Function
   * @param None
   * @retval None
@@ -513,10 +488,14 @@ static void MX_GPIO_Init(void)
   HAL_GPIO_WritePin(GPIOE, M24SR64_Y_RF_DISABLE_Pin|M24SR64_Y_GPO_Pin|ISM43362_RST_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
+  HAL_GPIO_WritePin(GPIOC, ExtAnalyzer4_Pin|ExtAnalyzer3_Pin|ExtAnalyzer2_Pin|ExtAnalyzer1_Pin
+                          |VL53L0X_XSHUT_Pin|LED3_WIFI__LED4_BLE_Pin, GPIO_PIN_RESET);
+
+  /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(GPIOA, ARD_D10_Pin|SPBTLE_RF_RST_Pin|ARD_D9_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOB, ARD_D8_Pin|ISM43362_BOOT0_Pin|ISM43362_WAKEUP_Pin|LED2_Pin
+  HAL_GPIO_WritePin(GPIOB, ARD_D8_Pin|ISM43362_BOOT0_Pin|ISM43362_WAKEUP_Pin|GPIO_PIN_14
                           |SPSGRF_915_SDN_Pin|ARD_D5_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
@@ -524,12 +503,6 @@ static void MX_GPIO_Init(void)
 
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(SPBTLE_RF_SPI3_CSN_GPIO_Port, SPBTLE_RF_SPI3_CSN_Pin, GPIO_PIN_SET);
-
-  /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOC, VL53L0X_XSHUT_Pin|LED3_WIFI__LED4_BLE_Pin, GPIO_PIN_RESET);
-
-  /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(SPSGRF_915_SPI3_CSN_GPIO_Port, SPSGRF_915_SPI3_CSN_Pin, GPIO_PIN_SET);
 
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(ISM43362_SPI3_CSN_GPIO_Port, ISM43362_SPI3_CSN_Pin, GPIO_PIN_SET);
@@ -553,12 +526,17 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(BUTTON_EXTI13_GPIO_Port, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : ARD_A5_Pin ARD_A4_Pin ARD_A3_Pin ARD_A2_Pin
-                           ARD_A1_Pin ARD_A0_Pin */
-  GPIO_InitStruct.Pin = ARD_A5_Pin|ARD_A4_Pin|ARD_A3_Pin|ARD_A2_Pin
-                          |ARD_A1_Pin|ARD_A0_Pin;
+  /*Configure GPIO pins : ARD_A5_Pin ARD_A4_Pin */
+  GPIO_InitStruct.Pin = ARD_A5_Pin|ARD_A4_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_ANALOG_ADC_CONTROL;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
+  HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
+
+  /*Configure GPIO pins : ExtAnalyzer4_Pin ExtAnalyzer3_Pin ExtAnalyzer2_Pin ExtAnalyzer1_Pin */
+  GPIO_InitStruct.Pin = ExtAnalyzer4_Pin|ExtAnalyzer3_Pin|ExtAnalyzer2_Pin|ExtAnalyzer1_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
   HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
 
   /*Configure GPIO pins : ARD_D1_Pin ARD_D0_Pin */
@@ -610,10 +588,10 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(ARD_D6_GPIO_Port, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : ARD_D8_Pin ISM43362_BOOT0_Pin ISM43362_WAKEUP_Pin LED2_Pin
-                           SPSGRF_915_SDN_Pin ARD_D5_Pin SPSGRF_915_SPI3_CSN_Pin */
-  GPIO_InitStruct.Pin = ARD_D8_Pin|ISM43362_BOOT0_Pin|ISM43362_WAKEUP_Pin|LED2_Pin
-                          |SPSGRF_915_SDN_Pin|ARD_D5_Pin|SPSGRF_915_SPI3_CSN_Pin;
+  /*Configure GPIO pins : ARD_D8_Pin ISM43362_BOOT0_Pin ISM43362_WAKEUP_Pin PB14
+                           SPSGRF_915_SDN_Pin ARD_D5_Pin */
+  GPIO_InitStruct.Pin = ARD_D8_Pin|ISM43362_BOOT0_Pin|ISM43362_WAKEUP_Pin|GPIO_PIN_14
+                          |SPSGRF_915_SDN_Pin|ARD_D5_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
@@ -641,8 +619,8 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : VL53L0X_GPIO1_EXTI7_Pin LSM3MDL_DRDY_EXTI8_Pin */
-  GPIO_InitStruct.Pin = VL53L0X_GPIO1_EXTI7_Pin|LSM3MDL_DRDY_EXTI8_Pin;
+  /*Configure GPIO pins : VL53L0X_GPIO1_EXTI7_Pin LSM3DSL_DRDY_EXTI8_Pin */
+  GPIO_InitStruct.Pin = VL53L0X_GPIO1_EXTI7_Pin|LSM3DSL_DRDY_EXTI8_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
@@ -684,6 +662,16 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
+// Doc for above
+//HAL_NVIC_SetPriority(EXTI1_IRQn, 5, 0);	 // ISM43362_DRDY_EXTI1 [ISM43362_DATARDY]
+//HAL_NVIC_EnableIRQ(EXTI1_IRQn);
+//
+//HAL_NVIC_SetPriority(EXTI9_5_IRQn, 5, 0);  // LIS3MDL_DRDY_EXTI8 [LIS3MDL_DRDY]
+//HAL_NVIC_EnableIRQ(EXTI9_5_IRQn);
+//
+//HAL_NVIC_SetPriority(EXTI15_10_IRQn, 5, 0); // LSM6DSL_INT1_EXTI11 [LSM6DSL_INT1]
+//HAL_NVIC_EnableIRQ(EXTI15_10_IRQn);
+
 /**
 * @brief  EXTI line detection callback.
 * @param  GPIO_Pin: Specifies the port pin connected to corresponding EXTI line.
@@ -699,11 +687,79 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 			break;
 		}
 
-	  default:
-	  {
-		break;
-	  }
+		case (LSM6DSL_INT1_EXTI11_Pin):
+		{
+			SensorBus1_Gyro_ACC_Intr();
+			break;
+		}
+
+		case (LSM3DSL_DRDY_EXTI8_Pin):
+		{
+			SensorBus1_Mag_Intr();
+			break;
+		}
+
+
+		default:
+		{
+			break;
+		}
 	}
+}
+
+
+// Here when DMA is complete and data is ready to use
+void HAL_I2C_MemRxCpltCallback(I2C_HandleTypeDef *hi2c) {
+	SensorBus1_DMA_CallBack();
+}
+
+
+
+void AccGyroCallback(GYRO_ACC_t * pRawData, uint16_t numItems) {
+
+	// First, average raw data
+	LSM6DSL_Axes_t gyroAvg = {0};
+	LSM6DSL_Axes_t accAvg = {0};
+
+	GYRO_ACC_t * pCruRawData = pRawData;
+	uint16_t itemCount = numItems;
+
+	// Now sum data sets
+	while(itemCount) {
+		gyroAvg.x += pCruRawData->gyro_data.x;
+		gyroAvg.y += pCruRawData->gyro_data.y;
+		gyroAvg.z += pCruRawData->gyro_data.z;
+
+		accAvg.x += pCruRawData->acc_data.x;
+		accAvg.y += pCruRawData->acc_data.y;
+		accAvg.z += pCruRawData->acc_data.z;
+
+		pCruRawData++;
+		itemCount--;
+	}
+
+	// Complete average
+	gyroAvg.x /= numItems;
+	gyroAvg.y /= numItems;
+	gyroAvg.z /= numItems;
+
+	accAvg.x /= numItems;
+	accAvg.y /= numItems;
+	accAvg.z /= numItems;
+
+
+	SEGGER_SYSVIEW_PrintfHost("Gyro Value: X = %d, Y = %d, Z = %d, ",
+			gyroAvg.x, gyroAvg.y, gyroAvg.z);
+
+	SEGGER_SYSVIEW_PrintfHost("Acc Value: X = %d, Y = %d, Z = %d, ",
+			accAvg.x, accAvg.y, accAvg.z);
+}
+
+
+void MagCallback(LIS3MDL_AxesRaw_t * pRawData, uint16_t numItems) {
+
+	SEGGER_SYSVIEW_PrintfHost("Mag value: X = %d, Y = %d, Z = %d, ",
+				 pRawData->x, pRawData->y, pRawData->z);
 }
 
 /* USER CODE END 4 */
@@ -718,47 +774,12 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 void StartDefaultTask(void const * argument)
 {
   /* USER CODE BEGIN 5 */
+	SensorBus1_Start();
 
-	RemoteCommTask(argument);
-//	uint8_t TxData[60];
-//	uint16_t Datalen;
-//	int count = 0;
-//	int errors = 0;
-//
-//
-//	WIFI_Status_t WifiStatus = WIFI_STATUS_ERROR;
-//
-//	// Wait for ES_WIFI to finish boot
-//	osDelay(500);
-
-
-//	while (1)
-//	{
-//		// Repeat connect sequence until we get good connection
-//		while (WifiStatus != WIFI_STATUS_OK)
-//		{
-//			if (WIFI_Init() != WIFI_STATUS_OK) {break;}
-//
-//			if (WIFI_Connect(WIFI_ACC_PNT_SSID, WIFI_ACC_PNT_PASSWORD, WIFI_ECN_WPA2_PSK) != WIFI_STATUS_OK) {break;}
-//
-//			if (WIFI_OpenClientConnection(0, WIFI_UDP_PROTOCOL, "UDP_CLIENT", WIFI_SOCKET_0_IP, WIFI_SOCKET_0_PORT, 0) != WIFI_STATUS_OK) {break;}
-//
-//			WifiStatus = WIFI_STATUS_OK;
-//		}
-//
-//		// Loop until connection is lost
-//		while (WifiStatus == WIFI_STATUS_OK)
-//		{
-//			count++;
-//
-//			sprintf((char*)TxData, "S3=30\r\r\nCount = %5d\r\n Error = %d5", count, errors);
-//
-//			WifiStatus = WIFI_SendData(WIFI_SOCKET_0, TxData, sizeof(TxData), &Datalen, WIFI_SOCKET_0_WRITE_TIMEOUT);
-//
-//			osDelay(10);
-//		}
-
-//	}
+  for(;;)
+  {
+	osDelay(1);
+  }
   /* USER CODE END 5 */
 }
 
@@ -772,17 +793,13 @@ void StartDefaultTask(void const * argument)
 void StartRemoteCommTask(void const * argument)
 {
   /* USER CODE BEGIN StartRemoteCommTask */
-  /* Infinite loop */
-  for(;;)
-  {
-    osDelay(1);
-  }
+	RemoteCommTask(argument);
   /* USER CODE END StartRemoteCommTask */
 }
 
 /**
   * @brief  Period elapsed callback in non blocking mode
-  * @note   This function is called  when TIM6 interrupt took place, inside
+  * @note   This function is called  when TIM5 interrupt took place, inside
   * HAL_TIM_IRQHandler(). It makes a direct call to HAL_IncTick() to increment
   * a global variable "uwTick" used as application time base.
   * @param  htim : TIM handle
@@ -793,7 +810,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
   /* USER CODE BEGIN Callback 0 */
 
   /* USER CODE END Callback 0 */
-  if (htim->Instance == TIM6) {
+  if (htim->Instance == TIM5) {
     HAL_IncTick();
   }
   /* USER CODE BEGIN Callback 1 */

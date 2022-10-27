@@ -1,0 +1,6 @@
+../Core/Src/sensor_bus1.c:36:6:SensorBus1_Init	16	static
+../Core/Src/sensor_bus1.c:53:6:SensorBus1_Start	8	static
+../Core/Src/sensor_bus1.c:59:6:SensorBus1_Gyro_ACC_Intr	8	static
+../Core/Src/sensor_bus1.c:67:6:SensorBus1_Mag_Intr	8	static
+../Core/Src/sensor_bus1.c:76:6:run_pending_dma	16	static
+../Core/Src/sensor_bus1.c:115:6:SensorBus1_DMA_CallBack	8	static

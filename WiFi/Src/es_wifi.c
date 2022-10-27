@@ -44,6 +44,7 @@
   */
 /* Includes ------------------------------------------------------------------*/
 #include "es_wifi.h"
+#include <SEGGER_SYSVIEW.h>
 
 #define WIFI_DEBUG  printf("%s:%d :",__FILE__,__LINE__);printf
 

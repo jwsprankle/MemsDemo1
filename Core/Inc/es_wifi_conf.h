@@ -51,7 +51,7 @@
 #endif  
 
 
-//#define WIFI_USE_CMSIS_OS
+#define WIFI_USE_CMSIS_OS
 
 #ifdef WIFI_USE_CMSIS_OS
 #include "cmsis_os.h"
