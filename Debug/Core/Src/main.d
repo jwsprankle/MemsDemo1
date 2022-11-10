@@ -64,7 +64,7 @@ Core/Src/main.o: ../Core/Src/main.c ../Core/Inc/main.h \
  ../Drivers/BSP/Components/lis3mdl/lis3mdl_reg.h \
  ../Core/Inc/sensor_bus1.h ../Core/Inc/bsp_Lsm6dsl.h \
  ../Core/Inc/bsp_lis3mdl.h ../WiFi/inc/wifi.h ../WiFi/inc/es_wifi.h \
- ../WiFi/inc/es_wifi_io.h \
+ ../WiFi/inc/es_wifi_io.h ../WiFi/inc/es_wifi.h \
  ../Middlewares/Third_Party/SEGGER/SEGGER_SYSVIEW.h
 ../Core/Inc/main.h:
 ../Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_hal.h:
@@ -139,4 +139,5 @@ Core/Src/main.o: ../Core/Src/main.c ../Core/Inc/main.h \
 ../WiFi/inc/wifi.h:
 ../WiFi/inc/es_wifi.h:
 ../WiFi/inc/es_wifi_io.h:
+../WiFi/inc/es_wifi.h:
 ../Middlewares/Third_Party/SEGGER/SEGGER_SYSVIEW.h:

@@ -7,6 +7,7 @@
 #include <stdint.h>
 #include <SEGGER_SYSVIEW.h>
 
+
 typedef enum {
 	DMA_RDY = 0, DMA_MAG = 1, DMA_ACC_GYRO = 2
 } DMA_BUS_t;
@@ -74,7 +75,9 @@ void SensorBus1_Mag_Intr(void) {
 
 
 void run_pending_dma(void) {
-	SEGGER_SYSVIEW_PrintfHost("run_pending_dma");
+
+//	SEGGER_SYSVIEW_PrintfHost("run_pending_dma");
+
 	// Must not be reentrant, this will catch that
 	// Must have SensorBus1_DMA_CallBack and SensorBus1_Intr on same interrupt level
 	assert_param(lock_update == GP_FALSE);
@@ -88,24 +91,27 @@ void run_pending_dma(void) {
 	// Else check for ryro/acc DMA read
 	if (req_gyro_acc) {
 
+		req_gyro_acc = GP_FALSE;
+		in_process_dma = DMA_ACC_GYRO;
+
 		// TODO: Handle error
 		HAL_I2C_Mem_Read_DMA(&hi2c2, LSM6DSL_I2C_ADD_L, LSM6DSL_FIFO_DATA_OUT_L,
 				I2C_MEMADD_SIZE_8BIT, (uint8_t*) p_acc_gyro_raw_data,
 				acc_gyro_raw_data_size);
 
-		in_process_dma = DMA_ACC_GYRO;
-		req_gyro_acc = GP_FALSE;
-		SEGGER_SYSVIEW_PrintfHost("req_gyro_acc DMA");
-	// Else check for mag request
-	} else if (req_mag) {
+//	SEGGER_SYSVIEW_PrintfHost("req_gyro_acc DMA");
+
+	} // Else check for mag request
+	else if (req_mag) {
+
+		req_mag = GP_FALSE;
+		in_process_dma = DMA_MAG;
+
 		// TODO: Handle error
-		HAL_I2C_Mem_Read_DMA(&hi2c2, LIS3MDL_I2C_ADD_L, LIS3MDL_OUT_X_L, I2C_MEMADD_SIZE_8BIT,
+		HAL_I2C_Mem_Read_DMA(&hi2c2, LIS3MDL_I2C_ADD_H, LIS3MDL_OUT_X_L, I2C_MEMADD_SIZE_8BIT,
 				(uint8_t*) p_mag_raw_data, sizeof(LIS3MDL_AxesRaw_t));
 
-
-		in_process_dma = DMA_MAG;
-		req_mag = GP_FALSE;
-		SEGGER_SYSVIEW_PrintfHost("req_mag DMA");
+//		SEGGER_SYSVIEW_PrintfHost("req_mag DMA");
 	}
 
 	lock_update = GP_FALSE;
@@ -120,7 +126,7 @@ void SensorBus1_DMA_CallBack(void) {
 	switch (in_process_dma) {
 
 	case DMA_ACC_GYRO:
-		SEGGER_SYSVIEW_PrintfHost("DMA_ACC_GYRO DMA CALLBACK");
+//		SEGGER_SYSVIEW_PrintfHost("DMA_ACC_GYRO CALLBACK");
 			// Acc Gyro call back with current raw data
 		pAccGyroCallback(p_acc_gyro_raw_data, GYRO_ACC_SAMPLES);
 
@@ -131,20 +137,10 @@ void SensorBus1_DMA_CallBack(void) {
 			p_acc_gyro_raw_data = &acc_gyro_raw_data1[0];
 		}
 
-		// Check if we have back to back gyro/acc interrupts.
-		// This can happen if we halt for debug.
-		// In this case the interrupt line remains high between data sets and
-		// therefore does not generate second rising edge.
-		// We'll just check for interrupt still high and schedule DMA again
-		if (HAL_GPIO_ReadPin(LSM6DSL_INT1_EXTI11_GPIO_Port, LSM6DSL_INT1_EXTI11_Pin) == GPIO_PIN_SET) {
-			req_gyro_acc = GP_TRUE;
-			SEGGER_SYSVIEW_PrintfHost("Reschedule req_gyro_acc");
-		}
-
 		break;
 
 	case DMA_MAG:
-		SEGGER_SYSVIEW_PrintfHost("DMA_MAG DMA CALLBACK");
+//		SEGGER_SYSVIEW_PrintfHost("DMA_MAG CALLBACK");
 		// Mag call back with current raw data
 		pMagCallback(p_mag_raw_data, 1);
 
@@ -155,22 +151,28 @@ void SensorBus1_DMA_CallBack(void) {
 			p_mag_raw_data = &mag_raw_data1;
 		}
 
-		// Check if we have back to back gyro ready interrupts.
-		// This can happen if we halt for debug.
-		// In this case the interrupt line remains high between data sets and
-		// therefore does not generate second rising edge.
-		// We'll just check for interrupt still high and schedule DMA again
-		if (HAL_GPIO_ReadPin(LSM3DSL_DRDY_EXTI8_GPIO_Port, LSM3DSL_DRDY_EXTI8_Pin) == GPIO_PIN_SET) {
-			req_mag = GP_TRUE;
-			SEGGER_SYSVIEW_PrintfHost("Reschedule req_mag");
-		}
-
 		break;
 
 	default:
 		assert_param(!HAL_OK);
 		break;
 	}
+
+	// Check if we have back to back gyro/acc interrupts.
+	// This can happen if we halt for debug.
+	// In this case the interrupt line remains high between data sets and
+	// therefore does not generate second rising edge.
+	// We'll just check for interrupt still high and schedule DMA again
+	if (HAL_GPIO_ReadPin(LSM6DSL_INT1_EXTI11_GPIO_Port, LSM6DSL_INT1_EXTI11_Pin) == GPIO_PIN_SET) {
+		req_gyro_acc = GP_TRUE;
+//			SEGGER_SYSVIEW_PrintfHost("Reschedule req_gyro_acc");
+	}
+
+	if (HAL_GPIO_ReadPin(LSM3DSL_DRDY_EXTI8_GPIO_Port, LSM3DSL_DRDY_EXTI8_Pin) == GPIO_PIN_SET) {
+		req_mag = GP_TRUE;
+//			SEGGER_SYSVIEW_PrintfHost("Reschedule req_mag");
+	}
+
 
 	in_process_dma = DMA_RDY; // Indicate ready for more
 

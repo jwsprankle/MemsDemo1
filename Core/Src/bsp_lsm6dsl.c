@@ -61,13 +61,18 @@ int32_t bsp_lsm6dsl_init() {
 	bsp_lsm6dsl_Obj.acc_odr = (lsm6dsl_odr_xl_t) GYRO_ACC_RATE;
 	bsp_lsm6dsl_Obj.gyro_odr = (lsm6dsl_odr_g_t) GYRO_ACC_RATE;
 
-	LSM6DSL_ACC_Disable(&bsp_lsm6dsl_Obj);
-	LSM6DSL_GYRO_Disable(&bsp_lsm6dsl_Obj);
 
 	if (lsm6dsl_fifo_data_rate_set(&(bsp_lsm6dsl_Obj.Ctx),
 			(lsm6dsl_odr_fifo_t) GYRO_ACC_RATE) != LSM6DSL_OK) {
 		return LSM6DSL_ERROR;
 	}
+
+
+	if (LSM6DSL_FIFO_Set_Mode(&bsp_lsm6dsl_Obj,
+			LSM6DSL_FIFO_MODE) != LSM6DSL_OK) {
+		return LSM6DSL_ERROR;
+	}
+
 
 	if (LSM6DSL_FIFO_ACC_Set_Decimation(&bsp_lsm6dsl_Obj,
 			LSM6DSL_FIFO_XL_NO_DEC) != LSM6DSL_OK) {
@@ -76,11 +81,6 @@ int32_t bsp_lsm6dsl_init() {
 
 	if (LSM6DSL_FIFO_GYRO_Set_Decimation(&bsp_lsm6dsl_Obj,
 			LSM6DSL_FIFO_GY_NO_DEC) != LSM6DSL_OK) {
-		return LSM6DSL_ERROR;
-	}
-
-	if (LSM6DSL_FIFO_Set_Mode(&bsp_lsm6dsl_Obj,
-			LSM6DSL_STREAM_MODE) != LSM6DSL_OK) {
 		return LSM6DSL_ERROR;
 	}
 

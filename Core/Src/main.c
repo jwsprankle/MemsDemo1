@@ -28,6 +28,7 @@
 #include "bsp_lis3mdl.h"
 #include "sensor_bus1.h"
 #include <wifi.h>
+#include <es_wifi.h>
 #include <SEGGER_SYSVIEW.h>
 
 /* USER CODE END Includes */
@@ -37,6 +38,26 @@
 
 
 /* USER CODE END PTD */
+#define TERMINAL_USE
+
+/* Update SSID and PASSWORD with own Access point settings */
+//#define SSID     "TP-Link_4008"
+//#define PASSWORD "70708103"
+#define SSID     "SETUP-8A78"
+#define PASSWORD "happen0984below"
+
+uint8_t RemoteIP[] = {192,168,0,236};
+#define TestSocket 0
+#define RemotePORT	62510
+
+//#define TEST_SOCKET 0
+//#define REMOTE_PORT	62510
+
+
+#define WIFI_WRITE_TIMEOUT 10000
+#define WIFI_READ_TIMEOUT  10000
+
+#define CONNECTION_TRIAL_MAX          10
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
@@ -778,7 +799,7 @@ void StartDefaultTask(void const * argument)
 
   for(;;)
   {
-	osDelay(1);
+	osDelay(100);
   }
   /* USER CODE END 5 */
 }
@@ -793,7 +814,65 @@ void StartDefaultTask(void const * argument)
 void StartRemoteCommTask(void const * argument)
 {
   /* USER CODE BEGIN StartRemoteCommTask */
-	RemoteCommTask(argument);
+
+//	uint8_t  MAC_Addr[6];
+//	uint8_t  IP_Addr[4];
+	uint8_t TxData[60];
+//	int32_t Socket = -1;
+	uint16_t Datalen;
+//	int32_t ret;
+//	int16_t Trials = CONNECTION_TRIAL_MAX;
+	int count = 0;
+	int errors = 0;
+
+	char testMe[] = "Howdy";
+
+	WIFI_Status_t WifiStatus = WIFI_STATUS_ERROR;
+
+	while (1)
+	{
+		while (WifiStatus != WIFI_STATUS_OK)
+		{
+			osDelay(500);
+
+			if (WIFI_Init() != WIFI_STATUS_OK) {break;}
+
+			if (WIFI_Connect(SSID, PASSWORD, WIFI_ECN_WPA2_PSK) != WIFI_STATUS_OK) {break;}
+
+			if (WIFI_OpenClientConnection(0, WIFI_UDP_PROTOCOL, "UDP_CLIENT", RemoteIP, RemotePORT, 0) != WIFI_STATUS_OK) {break;}
+
+			WifiStatus = WIFI_STATUS_OK;
+		}
+
+		while (WifiStatus == WIFI_STATUS_OK)
+		{
+			sprintf((char*)TxData, "S3=30\r\r\nCount = %5d\r\n Error = %d5", count, errors);
+
+			//WifiStatus = WIFI_SendData(TestSocket, TxData, sizeof(TxData), &Datalen, WIFI_WRITE_TIMEOUT);
+			WifiStatus = WIFI_SendData(TestSocket, (uint8_t*)testMe, sizeof(testMe), &Datalen, WIFI_WRITE_TIMEOUT);
+
+
+			if (WifiStatus != WIFI_STATUS_OK)
+			{
+			  errors++;
+			}
+
+			count++;
+
+			osDelay(100);
+		}
+
+		osDelay(100);
+	}
+
+/* Infinite loop */
+
+//	RemoteCommTask(argument);
+  for(;;)
+  {
+	osDelay(100);
+  }
+
   /* USER CODE END StartRemoteCommTask */
 }
 

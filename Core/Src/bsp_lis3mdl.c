@@ -32,22 +32,6 @@ int32_t bsp_lis3mdl_init() {
 		}
 	}
 
-	// ************** TEST CODE REMOVE! *******
-	LIS3MDL_Init(&bsp_lis3mdl_Obj);
-
-	// Setup interrupt on data ready
-	if (lis3mdl_int_generation_set(&(bsp_lis3mdl_Obj.Ctx),1) != LIS3MDL_OK) {
-		return LIS3MDL_ERROR;
-	}
-
-	bsp_lis3mdl_enable();
-	bsp_lis3mdl_Obj.is_initialized = 1;
-
-
-	return LIS3MDL_OK;
-	// ************** TEST CODE REMOVE! *******
-
-
 	// Reset device
 	if (lis3mdl_reset_set(&bsp_lis3mdl_Obj.Ctx, 1 ) != LIS3MDL_OK) {
 		return LIS3MDL_ERROR;
@@ -60,29 +44,16 @@ int32_t bsp_lis3mdl_init() {
 		}
 	} while (ctrl2_c.soft_rst == 1);
 
-
-	// Startup powerec down
-//	if (lis3mdl_operating_mode_set(&(bsp_lis3mdl_Obj.Ctx), LIS3MDL_POWER_DOWN) != LIS3MDL_OK) {
-//		return LIS3MDL_ERROR;
-//	}
-
-	// Startup disabled
-	if (LIS3MDL_MAG_Disable(&bsp_lis3mdl_Obj) != LIS3MDL_OK) {
-		return LIS3MDL_ERROR;
-	}
-
 	// Output data rate selection
 	if (lis3mdl_data_rate_set(&(bsp_lis3mdl_Obj.Ctx), LIS3MDL_UHP_40Hz) != LIS3MDL_OK)
 	{
 		return LIS3MDL_ERROR;
 	}
 
-
 	if (lis3mdl_block_data_update_set(&(bsp_lis3mdl_Obj.Ctx), PROPERTY_ENABLE) != LIS3MDL_OK)
 	{
 		return LIS3MDL_ERROR;
 	}
-
 
 	/* Set Output data rate. */
 	if (LIS3MDL_MAG_SetOutputDataRate(&bsp_lis3mdl_Obj, 40.0f) != LIS3MDL_OK)
@@ -90,19 +61,11 @@ int32_t bsp_lis3mdl_init() {
 		return LIS3MDL_ERROR;
 	}
 
-
 	/* Full scale selection. */
 	if (LIS3MDL_MAG_SetFullScale(&bsp_lis3mdl_Obj, LIS3MDL_16_GAUSS) != LIS3MDL_OK)
 	{
 		return LIS3MDL_ERROR;
 	}
-
-
-	// Setup interrupt on data ready
-	if (lis3mdl_int_generation_set(&(bsp_lis3mdl_Obj.Ctx),1) != LIS3MDL_OK) {
-		return LIS3MDL_ERROR;
-	}
-
 
 	bsp_lis3mdl_Obj.is_initialized = 1;
 
@@ -121,7 +84,8 @@ int32_t bsp_lis3mdl_enable(void) {
 		}
 	}
 
-	// Start up mag
+
+	// Startup mag
 	if (LIS3MDL_MAG_Enable(&bsp_lis3mdl_Obj) != LIS3MDL_OK) {
 		return LIS3MDL_ERROR;
 	}
